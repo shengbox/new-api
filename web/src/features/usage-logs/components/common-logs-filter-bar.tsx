@@ -39,6 +39,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { getApiKeys } from '@/features/keys/api'
 import { getGroups } from '@/features/users/api'
 import { useMediaQuery } from '@/hooks'
 import { getUserGroups } from '@/lib/api'
@@ -144,6 +145,28 @@ export function CommonLogsFilterBar<TData>(
       .filter((group) => group !== 'auto')
       .map((group) => ({ label: group, value: group }))
   }, [isAdmin, adminGroups, userGroups])
+  const { data: apiKeysData } = useQuery({
+    queryKey: ['tokens-filter-options'],
+    queryFn: async () => {
+      try {
+        return requireServerSuccess(await getApiKeys({ p: 1, size: 100 }))
+      } catch {
+        return undefined
+      }
+    },
+  })
+  const tokenOptions = useMemo(() => {
+    const items = apiKeysData?.data?.items ?? []
+    const seen = new Set<string>()
+    const options: { label: string; value: string }[] = []
+    for (const key of items) {
+      if (key.name && !seen.has(key.name)) {
+        seen.add(key.name)
+        options.push({ label: key.name, value: key.name })
+      }
+    }
+    return options
+  }, [apiKeysData])
 
   const searchState = useMemo<CommonLogDraft>(() => {
     const { start, end } = getDefaultTimeRange()
@@ -432,17 +455,25 @@ export function CommonLogsFilterBar<TData>(
       </Select>
     </LogsFilterField>
   )
+  const tokenFilter = (
+    <LogsFilterField className={sensitiveInputClass}>
+      <Combobox
+        options={tokenOptions}
+        allowCustomValue
+        aria-label={t('Token Name')}
+        emptyText={t('No token found.')}
+        placeholder={t('Token Name')}
+        className='h-8 min-w-0 text-sm leading-5'
+        popupClassName={sensitiveInputClass}
+        value={filters.token || ''}
+        onValueChange={(value) => handleChange('token', value ?? '')}
+        onKeyDown={handleKeyDown}
+      />
+    </LogsFilterField>
+  )
   const advancedFilters = (
     <>
-      <LogsFilterField>
-        <LogsFilterInput
-          placeholder={t('Token Name')}
-          className={sensitiveInputClass}
-          value={filters.token || ''}
-          onChange={(e) => handleChange('token', e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-      </LogsFilterField>
+      {tokenFilter}
       {isAdmin && (
         <LogsFilterField>
           <LogsFilterInput

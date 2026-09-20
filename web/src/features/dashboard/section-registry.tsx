@@ -39,17 +39,11 @@ const DASHBOARD_SECTIONS = [
     titleKey: 'Flow',
     build: () => null,
   },
-  {
-    id: 'users',
-    titleKey: 'User Analytics',
-    adminOnly: true,
-    build: () => null,
-  },
 ] as const
 
 export type DashboardSectionId = (typeof DASHBOARD_SECTIONS)[number]['id']
 
-const ADMIN_ONLY_SECTIONS = new Set<string>(['users'])
+const ADMIN_ONLY_SECTIONS = new Set<string>()
 
 const dashboardRegistry = createSectionRegistry<
   DashboardSectionId,
