@@ -57,7 +57,6 @@ import {
 } from '@/features/dashboard/lib'
 import {
   compactFlowSelectionLabel,
-  flowDisplayState,
   requireSuccessfulFlowRows,
 } from '@/features/dashboard/lib/flow-selection'
 import type {
@@ -94,7 +93,7 @@ function formatFlowMetricNumber(value: number): string {
 
 export function FlowCharts(props: FlowChartsProps) {
   const { t } = useTranslation()
-  const { resolvedTheme } = useChartTheme()
+  const { resolvedTheme, themeReady } = useChartTheme()
   const user = useAuthStore((state) => state.auth.user)
   const isAdmin = Boolean(user?.role && user.role >= ROLE.ADMIN)
   const isRoot = Boolean(user?.role && user.role >= ROLE.SUPER_ADMIN)
@@ -303,36 +302,184 @@ export function FlowCharts(props: FlowChartsProps) {
     const requestsLabel = t('Requests')
     const shareLabel = t('Share')
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const seriesList: any[] = []
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const axesList: any[] = [
-      {
-        orient: 'bottom',
-        type: 'band',
-        paddingInner: 0.25,
-        paddingOuter: 0.2,
-        label: {
-          autoRotate: true,
-          autoHide: false,
+    if (metricMode === 'tokens') {
+      return {
+        type: 'bar',
+        data: [
+          {
+            id: 'flowBarData',
+            values: processedData.displayItems,
+          },
+        ],
+        xField: 'name',
+        yField: 'tokens',
+        bar: {
           style: {
-            fontSize: 11,
-            fill: textColor,
+            fill: isDark ? '#60a5fa' : '#3b82f6',
+            cornerRadius: [3, 3, 0, 0],
+          },
+          state: {
+            hover: { stroke: '#1d4ed8', lineWidth: 1 },
           },
         },
-      },
-    ]
+        axes: [
+          {
+            orient: 'bottom',
+            type: 'band',
+            paddingInner: 0.25,
+            paddingOuter: 0.2,
+            label: {
+              autoRotate: true,
+              autoHide: false,
+              style: {
+                fontSize: 11,
+                fill: textColor,
+              },
+            },
+          },
+          {
+            orient: 'left',
+            type: 'linear',
+            title: {
+              visible: true,
+              text: tokensLabel,
+              style: { fill: textColor, fontSize: 11 },
+            },
+            label: {
+              formatMethod: (val: number) => formatFlowMetricNumber(val),
+              style: { fill: textColor },
+            },
+            grid: {
+              visible: true,
+              style: { stroke: gridColor, lineDash: [3, 3] },
+            },
+          },
+        ],
+        tooltip: {
+          visible: true,
+          mark: {
+            content: [
+              {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                key: tokensLabel,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value: (datum: any) =>
+                  `${formatFlowMetricNumber(Number(datum?.tokens) || 0)} (${shareLabel}: ${datum?.tokenShareStr ?? '0.0%'})`,
+              },
+              {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                key: requestsLabel,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value: (datum: any) =>
+                  `${formatFlowMetricNumber(Number(datum?.requests) || 0)} (${shareLabel}: ${datum?.requestShareStr ?? '0.0%'})`,
+              },
+            ],
+          },
+        },
+        background: 'transparent',
+        animation: true,
+      }
+    }
 
-    if (metricMode === 'all') {
-      // Dual-axis grouped bar chart combining Tokens and Requests
-      seriesList.push(
+    if (metricMode === 'requests') {
+      return {
+        type: 'bar',
+        data: [
+          {
+            id: 'flowBarData',
+            values: processedData.displayItems,
+          },
+        ],
+        xField: 'name',
+        yField: 'requests',
+        bar: {
+          style: {
+            fill: isDark ? '#34d399' : '#10b981',
+            cornerRadius: [3, 3, 0, 0],
+          },
+          state: {
+            hover: { stroke: '#047857', lineWidth: 1 },
+          },
+        },
+        axes: [
+          {
+            orient: 'bottom',
+            type: 'band',
+            paddingInner: 0.25,
+            paddingOuter: 0.2,
+            label: {
+              autoRotate: true,
+              autoHide: false,
+              style: {
+                fontSize: 11,
+                fill: textColor,
+              },
+            },
+          },
+          {
+            orient: 'left',
+            type: 'linear',
+            title: {
+              visible: true,
+              text: requestsLabel,
+              style: { fill: textColor, fontSize: 11 },
+            },
+            label: {
+              formatMethod: (val: number) => formatFlowMetricNumber(val),
+              style: { fill: textColor },
+            },
+            grid: {
+              visible: true,
+              style: { stroke: gridColor, lineDash: [3, 3] },
+            },
+          },
+        ],
+        tooltip: {
+          visible: true,
+          mark: {
+            content: [
+              {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                key: requestsLabel,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value: (datum: any) =>
+                  `${formatFlowMetricNumber(Number(datum?.requests) || 0)} (${shareLabel}: ${datum?.requestShareStr ?? '0.0%'})`,
+              },
+              {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                key: tokensLabel,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value: (datum: any) =>
+                  `${formatFlowMetricNumber(Number(datum?.tokens) || 0)} (${shareLabel}: ${datum?.tokenShareStr ?? '0.0%'})`,
+              },
+            ],
+          },
+        },
+        background: 'transparent',
+        animation: true,
+      }
+    }
+
+    // Default 'all': Dual-axis grouped bar chart combining Tokens and Requests
+    return {
+      type: 'common',
+      data: [
+        {
+          id: 'flowBarData',
+          values: processedData.displayItems,
+        },
+      ],
+      series: [
         {
           type: 'bar',
           id: 'tokensBar',
           name: tokensLabel,
+          dataId: 'flowBarData',
           dataIndex: 0,
           xField: 'name',
           yField: 'tokens',
+          barMaxWidth: 32,
+          barMinWidth: 4,
           bar: {
             style: {
               fill: isDark ? '#60a5fa' : '#3b82f6',
@@ -347,9 +494,12 @@ export function FlowCharts(props: FlowChartsProps) {
           type: 'bar',
           id: 'requestsBar',
           name: requestsLabel,
+          dataId: 'flowBarData',
           dataIndex: 0,
           xField: 'name',
           yField: 'requests',
+          barMaxWidth: 32,
+          barMinWidth: 4,
           bar: {
             style: {
               fill: isDark ? '#34d399' : '#10b981',
@@ -359,14 +509,27 @@ export function FlowCharts(props: FlowChartsProps) {
               hover: { stroke: '#047857', lineWidth: 1 },
             },
           },
-        }
-      )
-
-      axesList.push(
+        },
+      ],
+      axes: [
+        {
+          orient: 'bottom',
+          type: 'band',
+          paddingInner: 0.25,
+          paddingOuter: 0.2,
+          label: {
+            autoRotate: true,
+            autoHide: false,
+            style: {
+              fontSize: 11,
+              fill: textColor,
+            },
+          },
+        },
         {
           orient: 'left',
           type: 'linear',
-          seriesIndex: [0],
+          seriesId: ['tokensBar'],
           title: {
             visible: true,
             text: tokensLabel,
@@ -384,7 +547,7 @@ export function FlowCharts(props: FlowChartsProps) {
         {
           orient: 'right',
           type: 'linear',
-          seriesIndex: [1],
+          seriesId: ['requestsBar'],
           title: {
             visible: true,
             text: requestsLabel,
@@ -395,94 +558,10 @@ export function FlowCharts(props: FlowChartsProps) {
             style: { fill: textColor },
           },
           grid: { visible: false },
-        }
-      )
-    } else if (metricMode === 'tokens') {
-      seriesList.push({
-        type: 'bar',
-        id: 'tokensBar',
-        name: tokensLabel,
-        dataIndex: 0,
-        xField: 'name',
-        yField: 'tokens',
-        bar: {
-          style: {
-            fill: isDark ? '#60a5fa' : '#3b82f6',
-            cornerRadius: [3, 3, 0, 0],
-          },
-          state: {
-            hover: { stroke: '#1d4ed8', lineWidth: 1 },
-          },
-        },
-      })
-      axesList.push({
-        orient: 'left',
-        type: 'linear',
-        seriesIndex: [0],
-        title: {
-          visible: true,
-          text: tokensLabel,
-          style: { fill: textColor, fontSize: 11 },
-        },
-        label: {
-          formatMethod: (val: number) => formatFlowMetricNumber(val),
-          style: { fill: textColor },
-        },
-        grid: {
-          visible: true,
-          style: { stroke: gridColor, lineDash: [3, 3] },
-        },
-      })
-    } else {
-      seriesList.push({
-        type: 'bar',
-        id: 'requestsBar',
-        name: requestsLabel,
-        dataIndex: 0,
-        xField: 'name',
-        yField: 'requests',
-        bar: {
-          style: {
-            fill: isDark ? '#34d399' : '#10b981',
-            cornerRadius: [3, 3, 0, 0],
-          },
-          state: {
-            hover: { stroke: '#047857', lineWidth: 1 },
-          },
-        },
-      })
-      axesList.push({
-        orient: 'left',
-        type: 'linear',
-        seriesIndex: [0],
-        title: {
-          visible: true,
-          text: requestsLabel,
-          style: { fill: textColor, fontSize: 11 },
-        },
-        label: {
-          formatMethod: (val: number) => formatFlowMetricNumber(val),
-          style: { fill: textColor },
-        },
-        grid: {
-          visible: true,
-          style: { stroke: gridColor, lineDash: [3, 3] },
-        },
-      })
-    }
-
-    return {
-      type: 'common',
-      data: [
-        {
-          id: 'flowBarData',
-          values: processedData.displayItems,
         },
       ],
-      series: seriesList,
-      axes: axesList,
       legends: {
-        visible: metricMode === 'all',
+        visible: true,
         position: 'top',
         orient: 'top',
         padding: { bottom: 8 },
@@ -535,21 +614,18 @@ export function FlowCharts(props: FlowChartsProps) {
     }
   }, [metricMode, processedData.displayItems, resolvedTheme, t])
 
-  const displayState = flowDisplayState({
-    isLoading,
-    isError,
-    rows: flowRows,
-  })
-
   const flowErrorMessage =
     flowError instanceof Error
       ? flowError.message
       : t('Failed to load flow data')
 
+  const isDataEmpty =
+    !isLoading && (flowRows?.length === 0 || processedData.displayItems.length === 0)
+
   let chartContent = null
-  if (displayState === 'loading') {
+  if (isLoading) {
     chartContent = <Skeleton className='h-full w-full' />
-  } else if (displayState === 'error') {
+  } else if (isError) {
     chartContent = (
       <div className='flex h-full items-center justify-center p-4'>
         <Alert variant='destructive' className='max-w-md'>
@@ -559,7 +635,7 @@ export function FlowCharts(props: FlowChartsProps) {
         </Alert>
       </div>
     )
-  } else if (displayState === 'empty' || processedData.displayItems.length === 0) {
+  } else if (isDataEmpty) {
     chartContent = (
       <Empty className='h-full border-0 py-12'>
         <EmptyHeader>
@@ -572,12 +648,16 @@ export function FlowCharts(props: FlowChartsProps) {
       </Empty>
     )
   } else {
-    const chartKey = `${dimension}-${metricMode}-${topLimit}-${overflowMode}-${selectedUsers.join(',')}-${props.sensitiveVisible ? 'vis' : 'hid'}-${resolvedTheme}-${props.filters?.start_timestamp}-${props.filters?.end_timestamp}`
+    const chartKey = `${dimension}-${metricMode}-${topLimit}-${overflowMode}-${selectedUsers.join(',')}-${props.sensitiveVisible ? 'vis' : 'hid'}-${resolvedTheme}-${props.filters?.start_timestamp}-${props.filters?.end_timestamp}-${processedData.displayItems.length}`
     chartContent = (
       <VChart
         key={chartKey}
-        spec={barChartSpec}
-        theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+        spec={{
+          ...barChartSpec,
+          theme: resolvedTheme === 'dark' ? 'dark' : 'light',
+          background: 'transparent',
+        }}
+        option={VCHART_OPTION}
         options={VCHART_OPTION}
       />
     )
@@ -785,9 +865,62 @@ export function FlowCharts(props: FlowChartsProps) {
         </div>
 
         {/* Chart View */}
-        <div className='h-[480px] p-1.5 sm:h-[560px] sm:p-2 2xl:h-[640px]'>
+        <div className='h-[420px] p-1.5 sm:h-[480px] sm:p-2 2xl:h-[560px]'>
           {chartContent}
         </div>
+
+        {/* Detailed Breakdown List */}
+        {!isLoading && processedData.displayItems.length > 0 && (
+          <div className='border-t px-3 py-3 sm:px-5'>
+            <div className='text-muted-foreground mb-2 text-xs font-medium'>
+              {t('Token Breakdown')}
+            </div>
+            <div className='max-h-56 overflow-auto'>
+              <table className='w-full text-left text-xs'>
+                <thead>
+                  <tr className='text-muted-foreground border-b'>
+                    <th className='py-1.5 pr-2 font-medium'>#</th>
+                    <th className='py-1.5 px-2 font-medium'>
+                      {dimension === 'token'
+                        ? t('Token')
+                        : dimension === 'channel'
+                          ? t('Channel')
+                          : t('Model')}
+                    </th>
+                    <th className='py-1.5 px-2 text-right font-medium'>{t('Tokens')}</th>
+                    <th className='py-1.5 px-2 text-right font-medium'>{t('Share')}</th>
+                    <th className='py-1.5 px-2 text-right font-medium'>{t('Requests')}</th>
+                    <th className='py-1.5 pl-2 text-right font-medium'>{t('Share')}</th>
+                  </tr>
+                </thead>
+                <tbody className='divide-y'>
+                  {processedData.displayItems.map((item, index) => (
+                    <tr key={item.key} className='hover:bg-muted/50'>
+                      <td className='py-1.5 pr-2 text-muted-foreground font-mono'>
+                        {index + 1}
+                      </td>
+                      <td className='py-1.5 px-2 font-medium truncate max-w-[200px]'>
+                        {item.name}
+                      </td>
+                      <td className='py-1.5 px-2 text-right font-mono'>
+                        {formatFlowMetricNumber(item.tokens)}
+                      </td>
+                      <td className='py-1.5 px-2 text-right text-muted-foreground'>
+                        {item.tokenShareStr}
+                      </td>
+                      <td className='py-1.5 px-2 text-right font-mono'>
+                        {formatFlowMetricNumber(item.requests)}
+                      </td>
+                      <td className='py-1.5 pl-2 text-right text-muted-foreground'>
+                        {item.requestShareStr}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
