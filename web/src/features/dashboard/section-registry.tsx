@@ -35,15 +35,26 @@ const DASHBOARD_SECTIONS = [
     build: () => null,
   },
   {
-    id: 'flow',
+    id: 'analytics',
     titleKey: 'Call Analytics Dashboard',
+    build: () => null,
+  },
+  {
+    id: 'flow',
+    titleKey: 'Flow',
+    build: () => null,
+  },
+  {
+    id: 'users',
+    titleKey: 'User Analytics',
+    adminOnly: true,
     build: () => null,
   },
 ] as const
 
 export type DashboardSectionId = (typeof DASHBOARD_SECTIONS)[number]['id']
 
-const ADMIN_ONLY_SECTIONS = new Set<string>()
+const ADMIN_ONLY_SECTIONS = new Set<string>(['users'])
 
 const dashboardRegistry = createSectionRegistry<
   DashboardSectionId,

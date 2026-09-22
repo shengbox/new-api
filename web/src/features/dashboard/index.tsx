@@ -41,7 +41,9 @@ import { OverviewDashboard } from './components/overview/overview-dashboard'
 import { DEFAULT_TIME_GRANULARITY } from './constants'
 import {
   buildDefaultDashboardFilters,
+  getDefaultDays,
   getSavedChartPreferences,
+  getSavedGranularity,
   saveChartPreferences,
 } from './lib'
 import {
@@ -53,6 +55,7 @@ import type {
   DashboardChartPreferences,
   DashboardFilters,
   QuotaDataItem,
+  UserChartsFilters,
 } from './types'
 
 const route = getRouteApi('/_authenticated/dashboard/$section')
@@ -98,6 +101,18 @@ const LazyPerformanceOverview = lazy(() =>
   }))
 )
 
+
+const LazyUserCharts = lazy(() =>
+  import('./components/users/user-charts').then((m) => ({
+    default: m.UserCharts,
+  }))
+)
+
+const LazyCallAnalyticsCharts = lazy(() =>
+  import('./components/analytics/call-analytics-charts').then((m) => ({
+    default: m.CallAnalyticsCharts,
+  }))
+)
 
 const LazyFlowCharts = lazy(() =>
   import('./components/flow/flow-charts').then((m) => ({
@@ -175,8 +190,14 @@ const SECTION_META: Record<DashboardSectionId, { titleKey: string }> = {
   models: {
     titleKey: 'Model Call Analytics',
   },
-  flow: {
+  analytics: {
     titleKey: 'Call Analytics Dashboard',
+  },
+  flow: {
+    titleKey: 'Flow',
+  },
+  users: {
+    titleKey: 'User Analytics',
   },
 }
 
@@ -194,6 +215,16 @@ export function Dashboard() {
     useState<DashboardChartPreferences>(() => getSavedChartPreferences())
   const [modelFilters, setModelFilters] = useState<DashboardFilters>(() =>
     buildDefaultDashboardFilters(getSavedChartPreferences())
+  )
+  const [userChartsFilters, setUserChartsFilters] = useState<UserChartsFilters>(
+    () => {
+      const granularity = getSavedGranularity()
+      return {
+        timeGranularity: granularity,
+        selectedRange: getDefaultDays(granularity),
+        topUserLimit: 10,
+      }
+    }
   )
   const [flowSensitiveVisible, setFlowSensitiveVisible] = useState(true)
 
@@ -224,8 +255,13 @@ export function Dashboard() {
 
   const meta = SECTION_META[activeSection] ?? SECTION_META.overview
   const isAdmin = Boolean(userRole && userRole >= ROLE.ADMIN)
+  // Keep original flow and users intact in the registry, but hide them from the page tab bar.
+  const HIDDEN_SECTIONS = new Set(['overview', 'flow', 'users'])
   const visibleSections = useMemo(
-    () => DASHBOARD_SECTION_IDS.filter((section) => section !== 'overview'),
+    () =>
+      DASHBOARD_SECTION_IDS.filter(
+        (section) => !HIDDEN_SECTIONS.has(section)
+      ),
     []
   )
   const handleSectionChange = useCallback(
@@ -255,7 +291,7 @@ export function Dashboard() {
       </>
     ) : null
   const flowActions =
-    activeSection === 'flow' ? (
+    activeSection === 'analytics' || activeSection === 'flow' ? (
       <>
         <Tooltip>
           <TooltipTrigger
@@ -366,6 +402,26 @@ export function Dashboard() {
                 </Suspense>
               </FadeIn>
             </>
+          )}
+          {activeSection === 'analytics' && (
+            <FadeIn>
+              <Suspense fallback={<ModelChartsFallback />}>
+                <LazyCallAnalyticsCharts
+                  filters={modelFilters}
+                  sensitiveVisible={flowSensitiveVisible}
+                />
+              </Suspense>
+            </FadeIn>
+          )}
+          {activeSection === 'users' && (
+            <FadeIn>
+              <Suspense fallback={<ModelChartsFallback />}>
+                <LazyUserCharts
+                  filters={userChartsFilters}
+                  onFiltersChange={setUserChartsFilters}
+                />
+              </Suspense>
+            </FadeIn>
           )}
           {activeSection === 'flow' && (
             <FadeIn>
