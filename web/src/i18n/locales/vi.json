@@ -6761,5 +6761,9 @@
     "Zhipu GLM": "Zhipu GLM",
     "Zhipu V4": "Zhipu V4",
     "Zoom": "Zoom"
-  }
+  },
+  "Call Analytics Dashboard": "Bảng phân tích cuộc gọi",
+  "Analytics Dashboard Filters": "Bộ lọc bảng phân tích",
+  "Filter the analytics dashboard view by time range and user.": "Lọc dạng xem bảng phân tích theo khoảng thời gian và người dùng.",
+  "Data Breakdown": "Chi tiết dữ liệu"
 }

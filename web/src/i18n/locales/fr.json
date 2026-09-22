@@ -6761,5 +6761,9 @@
     "Zhipu GLM": "Zhipu GLM",
     "Zhipu V4": "Zhipu V4",
     "Zoom": "Zoom"
-  }
+  },
+  "Call Analytics Dashboard": "Tableau de bord d'analyse des appels",
+  "Analytics Dashboard Filters": "Filtres du tableau de bord d'analyse",
+  "Filter the analytics dashboard view by time range and user.": "Filtrer la vue du tableau de bord d'analyse par période et par utilisateur.",
+  "Data Breakdown": "Détails des données"
 }

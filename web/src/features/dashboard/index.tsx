@@ -176,7 +176,7 @@ const SECTION_META: Record<DashboardSectionId, { titleKey: string }> = {
     titleKey: 'Model Call Analytics',
   },
   flow: {
-    titleKey: 'Flow',
+    titleKey: 'Call Analytics Dashboard',
   },
 }
 
@@ -286,8 +286,8 @@ export function Dashboard() {
           currentFilters={modelFilters}
           onFilterChange={handleFilterChange}
           onReset={handleResetFilters}
-          titleKey='Flow Filters'
-          descriptionKey='Filter the traffic flow view by time range and user.'
+          titleKey='Analytics Dashboard Filters'
+          descriptionKey='Filter the analytics dashboard view by time range and user.'
         />
       </>
     ) : null

@@ -100,7 +100,7 @@ export function FlowCharts(props: FlowChartsProps) {
   const flowRole = isRoot ? 'root' : isAdmin ? 'admin' : 'user'
 
   const [dimension, setDimension] = useState<FlowDimension>('model')
-  const [metricMode, setMetricMode] = useState<MetricDisplayMode>('all')
+  const [metricMode, setMetricMode] = useState<MetricDisplayMode>('tokens')
   const [topLimit, setTopLimit] = useState<number>(DEFAULT_FLOW_TOP_LIMIT)
   const [overflowMode, setOverflowMode] = useState<'aggregate' | 'hide'>('aggregate')
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
@@ -461,6 +461,10 @@ export function FlowCharts(props: FlowChartsProps) {
     }
 
     // Default 'all': Dual-axis grouped bar chart combining Tokens and Requests
+    const itemCount = processedData.displayItems.length
+    const barWidth = Math.max(4, Math.min(22, Math.floor(220 / (itemCount || 1))))
+    const offset = Math.max(3, Math.floor(barWidth / 2 + 1))
+
     return {
       type: 'common',
       data: [
@@ -478,10 +482,12 @@ export function FlowCharts(props: FlowChartsProps) {
           dataIndex: 0,
           xField: 'name',
           yField: 'tokens',
-          barMaxWidth: 32,
+          barWidth,
+          barMaxWidth: 24,
           barMinWidth: 4,
           bar: {
             style: {
+              dx: -offset,
               fill: isDark ? '#60a5fa' : '#3b82f6',
               cornerRadius: [3, 3, 0, 0],
             },
@@ -498,10 +504,12 @@ export function FlowCharts(props: FlowChartsProps) {
           dataIndex: 0,
           xField: 'name',
           yField: 'requests',
-          barMaxWidth: 32,
+          barWidth,
+          barMaxWidth: 24,
           barMinWidth: 4,
           bar: {
             style: {
+              dx: offset,
               fill: isDark ? '#34d399' : '#10b981',
               cornerRadius: [3, 3, 0, 0],
             },
@@ -735,10 +743,6 @@ export function FlowCharts(props: FlowChartsProps) {
               className='shrink-0'
             >
               <TabsList aria-label={t('Metric')}>
-                <TabsTrigger value='all' className='gap-1 px-2.5 text-xs'>
-                  <BarChart3 data-icon='inline-start' aria-hidden='true' />
-                  {t('Tokens & Requests')}
-                </TabsTrigger>
                 <TabsTrigger value='tokens' className='gap-1 px-2.5 text-xs'>
                   <Hash data-icon='inline-start' aria-hidden='true' />
                   {t('Tokens')}
@@ -746,6 +750,10 @@ export function FlowCharts(props: FlowChartsProps) {
                 <TabsTrigger value='requests' className='gap-1 px-2.5 text-xs'>
                   <Activity data-icon='inline-start' aria-hidden='true' />
                   {t('Requests')}
+                </TabsTrigger>
+                <TabsTrigger value='all' className='gap-1 px-2.5 text-xs'>
+                  <BarChart3 data-icon='inline-start' aria-hidden='true' />
+                  {t('Tokens & Requests')}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -873,7 +881,7 @@ export function FlowCharts(props: FlowChartsProps) {
         {!isLoading && processedData.displayItems.length > 0 && (
           <div className='border-t px-3 py-3 sm:px-5'>
             <div className='text-muted-foreground mb-2 text-xs font-medium'>
-              {t('Token Breakdown')}
+              {t('Data Breakdown')}
             </div>
             <div className='max-h-56 overflow-auto'>
               <table className='w-full text-left text-xs'>
