@@ -6760,10 +6760,10 @@
     "Zhipu": "Zhipu",
     "Zhipu GLM": "Zhipu GLM",
     "Zhipu V4": "Zhipu V 4",
-    "Zoom": "ズーム"
-  },
-  "Call Analytics Dashboard": "呼び出し分析ダッシュボード",
-  "Analytics Dashboard Filters": "呼び出し分析フィルター",
-  "Filter the analytics dashboard view by time range and user.": "時間範囲とユーザーで分析ダッシュボードビューを絞り込みます。",
-  "Data Breakdown": "データ内訳"
+    "Zoom": "ズーム",
+    "Call Analytics Dashboard": "呼び出し分析ダッシュボード",
+    "Analytics Dashboard Filters": "呼び出し分析フィルター",
+    "Filter the analytics dashboard view by time range and user.": "時間範囲とユーザーで分析ダッシュボードビューを絞り込みます。",
+    "Data Breakdown": "データ内訳"
+  }
 }

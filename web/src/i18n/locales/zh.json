@@ -6760,10 +6760,10 @@
     "Zhipu": "智谱",
     "Zhipu GLM": "智谱GLM",
     "Zhipu V4": "智谱 V4",
-    "Zoom": "缩放"
-  },
-  "Call Analytics Dashboard": "调用分析看板",
-  "Analytics Dashboard Filters": "调用分析看板筛选",
-  "Filter the analytics dashboard view by time range and user.": "按时间范围和用户筛选调用分析看板视图。",
-  "Data Breakdown": "数据明细"
+    "Zoom": "缩放",
+    "Call Analytics Dashboard": "调用分析看板",
+    "Analytics Dashboard Filters": "调用分析看板筛选",
+    "Filter the analytics dashboard view by time range and user.": "按时间范围和用户筛选调用分析看板视图。",
+    "Data Breakdown": "数据明细"
+  }
 }

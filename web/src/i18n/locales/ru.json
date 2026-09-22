@@ -6760,10 +6760,10 @@
     "Zhipu": "Zhipu",
     "Zhipu GLM": "Zhipu GLM",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
-  },
-  "Call Analytics Dashboard": "Панель аналитики вызовов",
-  "Analytics Dashboard Filters": "Фильтры панели аналитики",
-  "Filter the analytics dashboard view by time range and user.": "Фильтрация аналитики по диапазону времени и пользователям.",
-  "Data Breakdown": "Детализация данных"
+    "Zoom": "Zoom",
+    "Call Analytics Dashboard": "Панель аналитики вызовов",
+    "Analytics Dashboard Filters": "Фильтры панели аналитики",
+    "Filter the analytics dashboard view by time range and user.": "Фильтрация аналитики по диапазону времени и пользователям.",
+    "Data Breakdown": "Детализация данных"
+  }
 }
