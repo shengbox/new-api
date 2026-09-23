@@ -6764,6 +6764,21 @@
     "Call Analytics Dashboard": "調用分析看板",
     "Analytics Dashboard Filters": "調用分析看板篩選",
     "Filter the analytics dashboard view by time range and user.": "按時間範圍和用戶篩選調用分析看板視圖。",
-    "Data Breakdown": "數據明細"
+    "Data Breakdown": "數據明細",
+    "Export": "匯出",
+    "Export Common Logs": "匯出使用日誌",
+    "Export filtered usage logs to Excel or CSV file.": "將篩選後的使用日誌匯出為 Excel 或 CSV 檔案。",
+    "Export Scope": "匯出範圍",
+    "Current Page": "目前頁資料",
+    "All Filtered Results": "全部篩選結果",
+    "Export Format": "匯出格式",
+    "Fetching logs... ({{current}} / {{total}})": "正在取得日誌... ({{current}} / {{total}})",
+    "Exporting...": "正在匯出...",
+    "No logs available to export": "暫無符合條件的日誌可匯出",
+    "Successfully exported {{count}} logs": "成功匯出 {{count}} 條日誌",
+    "Failed to export logs": "匯出日誌失敗",
+    "Prompt Tokens": "提示 Token",
+    "Completion Tokens": "補全 Token",
+    "Duration (s)": "耗時(秒)"
   }
 }

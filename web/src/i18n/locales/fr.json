@@ -6764,6 +6764,21 @@
     "Call Analytics Dashboard": "Tableau de bord d'analyse des appels",
     "Analytics Dashboard Filters": "Filtres du tableau de bord d'analyse",
     "Filter the analytics dashboard view by time range and user.": "Filtrer la vue du tableau de bord d'analyse par période et par utilisateur.",
-    "Data Breakdown": "Détails des données"
+    "Data Breakdown": "Détails des données",
+    "Export": "Exporter",
+    "Export Common Logs": "Exporter les journaux d'utilisation",
+    "Export filtered usage logs to Excel or CSV file.": "Exporter les journaux d'utilisation filtrés vers un fichier Excel ou CSV.",
+    "Export Scope": "Périmètre d'exportation",
+    "Current Page": "Page actuelle",
+    "All Filtered Results": "Tous les résultats filtrés",
+    "Export Format": "Format d'exportation",
+    "Fetching logs... ({{current}} / {{total}})": "Récupération des journaux... ({{current}} / {{total}})",
+    "Exporting...": "Exportation...",
+    "No logs available to export": "Aucun journal disponible à exporter",
+    "Successfully exported {{count}} logs": "{{count}} journaux exportés avec succès",
+    "Failed to export logs": "Échec de l'exportation des journaux",
+    "Prompt Tokens": "Tokens de prompt",
+    "Completion Tokens": "Tokens de complétion",
+    "Duration (s)": "Durée (s)"
   }
 }

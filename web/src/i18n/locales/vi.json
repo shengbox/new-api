@@ -6764,6 +6764,21 @@
     "Call Analytics Dashboard": "Bảng phân tích cuộc gọi",
     "Analytics Dashboard Filters": "Bộ lọc bảng phân tích",
     "Filter the analytics dashboard view by time range and user.": "Lọc dạng xem bảng phân tích theo khoảng thời gian và người dùng.",
-    "Data Breakdown": "Chi tiết dữ liệu"
+    "Data Breakdown": "Chi tiết dữ liệu",
+    "Export": "Xuất",
+    "Export Common Logs": "Xuất nhật ký sử dụng",
+    "Export filtered usage logs to Excel or CSV file.": "Xuất nhật ký sử dụng đã lọc sang tệp Excel hoặc CSV.",
+    "Export Scope": "Phạm vi xuất",
+    "Current Page": "Trang hiện tại",
+    "All Filtered Results": "Tất cả kết quả đã lọc",
+    "Export Format": "Định dạng xuất",
+    "Fetching logs... ({{current}} / {{total}})": "Đang tải nhật ký... ({{current}} / {{total}})",
+    "Exporting...": "Đang xuất...",
+    "No logs available to export": "Không có nhật ký nào để xuất",
+    "Successfully exported {{count}} logs": "Đã xuất thành công {{count}} nhật ký",
+    "Failed to export logs": "Không thể xuất nhật ký",
+    "Prompt Tokens": "Token đầu vào",
+    "Completion Tokens": "Token đầu ra",
+    "Duration (s)": "Thời lượng (giây)"
   }
 }

@@ -6764,6 +6764,21 @@
     "Call Analytics Dashboard": "Панель аналитики вызовов",
     "Analytics Dashboard Filters": "Фильтры панели аналитики",
     "Filter the analytics dashboard view by time range and user.": "Фильтрация аналитики по диапазону времени и пользователям.",
-    "Data Breakdown": "Детализация данных"
+    "Data Breakdown": "Детализация данных",
+    "Export": "Экспорт",
+    "Export Common Logs": "Экспорт журналов использования",
+    "Export filtered usage logs to Excel or CSV file.": "Экспорт отфильтрованных журналов использования в файл Excel или CSV.",
+    "Export Scope": "Область экспорта",
+    "Current Page": "Текущая страница",
+    "All Filtered Results": "Все отфильтрованные результаты",
+    "Export Format": "Формат экспорта",
+    "Fetching logs... ({{current}} / {{total}})": "Получение журналов... ({{current}} / {{total}})",
+    "Exporting...": "Экспорт...",
+    "No logs available to export": "Нет доступных журналов для экспорта",
+    "Successfully exported {{count}} logs": "Успешно экспортировано {{count}} журналов",
+    "Failed to export logs": "Не удалось экспортировать журналы",
+    "Prompt Tokens": "Токены промпта",
+    "Completion Tokens": "Токены завершения",
+    "Duration (s)": "Длительность (с)"
   }
 }

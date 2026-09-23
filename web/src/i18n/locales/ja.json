@@ -6764,6 +6764,21 @@
     "Call Analytics Dashboard": "呼び出し分析ダッシュボード",
     "Analytics Dashboard Filters": "呼び出し分析フィルター",
     "Filter the analytics dashboard view by time range and user.": "時間範囲とユーザーで分析ダッシュボードビューを絞り込みます。",
-    "Data Breakdown": "データ内訳"
+    "Data Breakdown": "データ内訳",
+    "Export": "エクスポート",
+    "Export Common Logs": "使用ログのエクスポート",
+    "Export filtered usage logs to Excel or CSV file.": "フィルターされた使用ログをExcelまたはCSVファイルにエクスポートします。",
+    "Export Scope": "エクスポート範囲",
+    "Current Page": "現在のページ",
+    "All Filtered Results": "すべてのフィルター結果",
+    "Export Format": "エクスポート形式",
+    "Fetching logs... ({{current}} / {{total}})": "ログを取得中... ({{current}} / {{total}})",
+    "Exporting...": "エクスポート中...",
+    "No logs available to export": "エクスポート可能なログがありません",
+    "Successfully exported {{count}} logs": "{{count}} 件のログを正常にエクスポートしました",
+    "Failed to export logs": "ログのエクスポートに失敗しました",
+    "Prompt Tokens": "プロンプト Token",
+    "Completion Tokens": "補完 Token",
+    "Duration (s)": "所要時間(秒)"
   }
 }

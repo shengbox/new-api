@@ -6764,6 +6764,21 @@
     "Call Analytics Dashboard": "Call Analytics Dashboard",
     "Analytics Dashboard Filters": "Analytics Dashboard Filters",
     "Filter the analytics dashboard view by time range and user.": "Filter the analytics dashboard view by time range and user.",
-    "Data Breakdown": "Data Breakdown"
+    "Data Breakdown": "Data Breakdown",
+    "Export": "Export",
+    "Export Common Logs": "Export Common Logs",
+    "Export filtered usage logs to Excel or CSV file.": "Export filtered usage logs to Excel or CSV file.",
+    "Export Scope": "Export Scope",
+    "Current Page": "Current Page",
+    "All Filtered Results": "All Filtered Results",
+    "Export Format": "Export Format",
+    "Fetching logs... ({{current}} / {{total}})": "Fetching logs... ({{current}} / {{total}})",
+    "Exporting...": "Exporting...",
+    "No logs available to export": "No logs available to export",
+    "Successfully exported {{count}} logs": "Successfully exported {{count}} logs",
+    "Failed to export logs": "Failed to export logs",
+    "Prompt Tokens": "Prompt Tokens",
+    "Completion Tokens": "Completion Tokens",
+    "Duration (s)": "Duration (s)"
   }
 }
