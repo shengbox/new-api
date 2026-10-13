@@ -21,6 +21,7 @@ import { VChart } from '@visactor/react-vchart'
 import {
   Activity,
   BarChart3,
+  ChartSpline,
   CircleAlert,
   Cpu,
   Hash,
@@ -50,9 +51,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { getFlowQuotaDates } from '@/features/dashboard/api'
+import { getFlowQuotaDates, getFlowQuotaTrendDates } from '@/features/dashboard/api'
+import { DEFAULT_TIME_GRANULARITY } from '@/features/dashboard/constants'
 import {
   buildQueryParams,
+  getDashboardChartColors,
   getDefaultDays,
 } from '@/features/dashboard/lib'
 import {
@@ -62,10 +65,16 @@ import {
 import type {
   DashboardFilters,
   FlowQuotaDataItem,
+  FlowQuotaTrendDataItem,
+  FlowRole,
 } from '@/features/dashboard/types'
+import dayjs from '@/lib/dayjs'
 import { ROLE } from '@/lib/roles'
 import { requireServerSuccess } from '@/lib/server-error-message'
-import { computeTimeRange } from '@/lib/time'
+import {
+  computeTimeRange,
+  formatChartTime,
+} from '@/lib/time'
 import { useChartTheme } from '@/lib/use-chart-theme'
 import { VCHART_OPTION } from '@/lib/vchart'
 import { useAuthStore } from '@/stores/auth-store'
@@ -78,6 +87,17 @@ interface CallAnalyticsChartsProps {
 
 type FlowDimension = 'token' | 'model' | 'channel'
 type MetricDisplayMode = 'all' | 'tokens' | 'requests'
+type ChartType = 'bar' | 'trend'
+
+interface TrendMetricCell {
+  tokens: number
+  requests: number
+}
+
+interface TrendDatum extends TrendMetricCell {
+  time: string
+  series: string
+}
 
 const FLOW_TOP_LIMIT_OPTIONS = [10, 20, 50, 100] as const
 const DEFAULT_FLOW_TOP_LIMIT = 20
@@ -87,20 +107,38 @@ const FLOW_OVERFLOW_MODE_OPTIONS = [
   { value: 'hide', labelKey: 'Hide' },
 ] as const
 
+const DIMENSION_TITLE_KEYS: Record<FlowDimension, string> = {
+  token: 'Token Analytics',
+  model: 'Model Analytics',
+  channel: 'Channel Analytics',
+}
+
+const DIMENSION_LABEL_KEYS: Record<FlowDimension, string> = {
+  token: 'Token',
+  model: 'Model',
+  channel: 'Channel',
+}
+
 function formatFlowMetricNumber(value: number): string {
   return Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
 }
 
 export function CallAnalyticsCharts(props: CallAnalyticsChartsProps) {
   const { t } = useTranslation()
-  const { resolvedTheme, themeReady } = useChartTheme()
+  const { resolvedTheme } = useChartTheme()
   const user = useAuthStore((state) => state.auth.user)
   const isAdmin = Boolean(user?.role && user.role >= ROLE.ADMIN)
   const isRoot = Boolean(user?.role && user.role >= ROLE.SUPER_ADMIN)
-  const flowRole = isRoot ? 'root' : isAdmin ? 'admin' : 'user'
+  let flowRole: FlowRole = 'user'
+  if (isRoot) {
+    flowRole = 'root'
+  } else if (isAdmin) {
+    flowRole = 'admin'
+  }
 
   const [dimension, setDimension] = useState<FlowDimension>('model')
   const [metricMode, setMetricMode] = useState<MetricDisplayMode>('tokens')
+  const [chartType, setChartType] = useState<ChartType>('bar')
   const [topLimit, setTopLimit] = useState<number>(DEFAULT_FLOW_TOP_LIMIT)
   const [overflowMode, setOverflowMode] = useState<'aggregate' | 'hide'>('aggregate')
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
@@ -135,6 +173,28 @@ export function CallAnalyticsCharts(props: CallAnalyticsChartsProps) {
     select: (res) =>
       requireSuccessfulFlowRows(res, t('Please try again later.')),
     staleTime: 60_000,
+  })
+
+  const timeGranularity =
+    props.filters?.time_granularity ?? DEFAULT_TIME_GRANULARITY
+
+  // The trend data is only fetched while the trend chart is showing; the bar
+  // chart already covers the aggregate view.
+  const {
+    data: trendRows,
+    error: trendError,
+    isError: isTrendError,
+    isLoading: isTrendLoading,
+  } = useQuery({
+    queryKey: ['dashboard', 'flow-trend', flowQueryParams, flowRole],
+    queryFn: async () =>
+      requireServerSuccess(
+        await getFlowQuotaTrendDates(flowQueryParams, isAdmin)
+      ),
+    select: (res) =>
+      requireSuccessfulFlowRows(res, t('Please try again later.')),
+    staleTime: 60_000,
+    enabled: chartType === 'trend',
   })
 
   const maskSensitive = props.sensitiveVisible === false
@@ -205,7 +265,7 @@ export function CallAnalyticsCharts(props: CallAnalyticsChartsProps) {
       }
     }
 
-    const items = Array.from(itemMap.values())
+    const items = [...itemMap.values()]
 
     // Sort by tokens (or requests if metricMode === 'requests') descending
     items.sort((a, b) => {
@@ -274,6 +334,139 @@ export function CallAnalyticsCharts(props: CallAnalyticsChartsProps) {
     overflowMode,
   ])
 
+  // Trend chart: one smooth line per visible dimension value across time.
+  const processedTrend = useMemo(() => {
+    const floorBucket = (tsSec: number): number => {
+      const d = dayjs(tsSec * 1000)
+      if (timeGranularity === 'hour') return d.startOf('hour').unix()
+      if (timeGranularity === 'week') {
+        const startOfDay = d.startOf('day')
+        return startOfDay.subtract(startOfDay.day(), 'day').unix()
+      }
+      return d.startOf('day').unix()
+    }
+    const addBucket = (tsSec: number): number => {
+      const d = dayjs(tsSec * 1000)
+      if (timeGranularity === 'hour') return d.add(1, 'hour').unix()
+      if (timeGranularity === 'week') return d.add(1, 'week').unix()
+      return d.add(1, 'day').unix()
+    }
+    const dimensionName = (row: FlowQuotaTrendDataItem): string => {
+      if (dimension === 'token') {
+        const tokenId = row.token_id ?? 0
+        if (maskSensitive && row.token_name) return '***'
+        return (
+          row.token_name ||
+          (tokenId > 0 ? `token-${tokenId}` : t('Unknown Token'))
+        )
+      }
+      if (dimension === 'channel') {
+        const channelId = row.channel_id ?? 0
+        return (
+          row.channel_name ||
+          (channelId > 0 ? `channel-${channelId}` : t('Unknown Channel'))
+        )
+      }
+      return row.model_name || t('Unknown Model')
+    }
+
+    const rows = trendRows ?? []
+    const selectedUserSet = new Set(selectedUsers)
+    const filteredRows =
+      selectedUserSet.size > 0
+        ? rows.filter((row) => {
+            const uid = row.user_id ? String(row.user_id) : row.username || ''
+            return selectedUserSet.has(`user:${uid}`) || selectedUserSet.has(uid)
+          })
+        : rows
+
+    const cellsByBucket = new Map<number, Map<string, TrendMetricCell>>()
+    const totalsByName = new Map<string, TrendMetricCell>()
+    for (const row of filteredRows) {
+      const bucket = floorBucket(row.created_at)
+      const name = dimensionName(row)
+      const tokens = Number(row.token_used) || 0
+      const requests = Number(row.count) || 0
+
+      const bucketCells =
+        cellsByBucket.get(bucket) ?? new Map<string, TrendMetricCell>()
+      const bucketCell = bucketCells.get(name) ?? { tokens: 0, requests: 0 }
+      bucketCell.tokens += tokens
+      bucketCell.requests += requests
+      bucketCells.set(name, bucketCell)
+      cellsByBucket.set(bucket, bucketCells)
+
+      const totalCell = totalsByName.get(name) ?? { tokens: 0, requests: 0 }
+      totalCell.tokens += tokens
+      totalCell.requests += requests
+      totalsByName.set(name, totalCell)
+    }
+
+    const sortedNames = [...totalsByName.entries()]
+      .sort(([, a], [, b]) =>
+        metricMode === 'requests'
+          ? b.requests - a.requests || b.tokens - a.tokens
+          : b.tokens - a.tokens || b.requests - a.requests
+      )
+      .map(([name]) => name)
+
+    const topNames = sortedNames.slice(0, topLimit)
+    const topNameSet = new Set(topNames)
+    const otherLabel = t('Other')
+    const showOther =
+      overflowMode === 'aggregate' && sortedNames.length > topLimit
+    const seriesNames = showOther ? [...topNames, otherLabel] : topNames
+
+    const buckets: { ts: number; label: string }[] = []
+    const firstBucket = floorBucket(timeRange.start_timestamp)
+    const lastBucket = floorBucket(timeRange.end_timestamp)
+    for (
+      let ts = firstBucket;
+      ts <= lastBucket && buckets.length < 1000;
+      ts = addBucket(ts)
+    ) {
+      buckets.push({ ts, label: formatChartTime(ts, timeGranularity) })
+    }
+
+    const values: TrendDatum[] = []
+    let hasData = false
+    for (const bucket of buckets) {
+      const bucketCells = cellsByBucket.get(bucket.ts)
+      let otherTokens = 0
+      let otherRequests = 0
+      if (bucketCells) {
+        for (const [name, cell] of bucketCells) {
+          if (topNameSet.has(name)) continue
+          otherTokens += cell.tokens
+          otherRequests += cell.requests
+        }
+      }
+      for (const name of seriesNames) {
+        const cell =
+          name === otherLabel
+            ? { tokens: otherTokens, requests: otherRequests }
+            : bucketCells?.get(name)
+        const tokens = cell?.tokens ?? 0
+        const requests = cell?.requests ?? 0
+        if (tokens > 0 || requests > 0) hasData = true
+        values.push({ time: bucket.label, series: name, tokens, requests })
+      }
+    }
+
+    return { seriesNames, values, hasData }
+  }, [
+    trendRows,
+    selectedUsers,
+    dimension,
+    maskSensitive,
+    t,
+    metricMode,
+    topLimit,
+    overflowMode,
+    timeGranularity,
+    timeRange,
+  ])
+
   // User filter options for admins
   const userFilterOptions = useMemo(() => {
     const rows = flowRows ?? []
@@ -287,7 +480,7 @@ export function CallAnalyticsCharts(props: CallAnalyticsChartsProps) {
         })
       }
     }
-    return Array.from(users.values()).map((u) => ({
+    return [...users.values()].map((u) => ({
       value: `user:${u.id}`,
       label: u.name,
     }))
@@ -622,24 +815,190 @@ export function CallAnalyticsCharts(props: CallAnalyticsChartsProps) {
     }
   }, [metricMode, processedData.displayItems, resolvedTheme, t])
 
-  const flowErrorMessage =
-    flowError instanceof Error
-      ? flowError.message
-      : t('Failed to load flow data')
+  // Trend chart spec: smooth lines over time, one per visible dimension value.
+  const trendChartSpec = useMemo(() => {
+    const isDark = resolvedTheme === 'dark'
+    const textColor = isDark ? '#9ca3af' : '#6b7280'
+    const gridColor = isDark ? '#374151' : '#f3f4f6'
+    const tokensLabel = t('Tokens')
+    const requestsLabel = t('Requests')
+    const seriesNames = processedTrend.seriesNames
+    const color = {
+      type: 'ordinal' as const,
+      domain: seriesNames,
+      range: getDashboardChartColors(Math.max(seriesNames.length, 1)),
+    }
+    const timeAxis = {
+      orient: 'bottom' as const,
+      type: 'band' as const,
+      paddingInner: 0.1,
+      paddingOuter: 0.1,
+      label: {
+        autoRotate: true,
+        autoHide: false,
+        style: { fontSize: 11, fill: textColor },
+      },
+    }
+    const linearAxisAlignment = (
+      orient: 'left' | 'right',
+      title: string,
+      showGrid: boolean,
+      seriesId?: string
+    ) => ({
+      orient,
+      type: 'linear' as const,
+      ...(seriesId ? { seriesId: [seriesId] } : {}),
+      title: {
+        visible: true,
+        text: title,
+        style: { fill: textColor, fontSize: 11 },
+      },
+      label: {
+        formatMethod: (val: number) => formatFlowMetricNumber(val),
+        style: { fill: textColor },
+      },
+      grid: showGrid
+        ? { visible: true, style: { stroke: gridColor, lineDash: [3, 3] } }
+        : { visible: false },
+    })
 
-  const isDataEmpty =
-    !isLoading && (flowRows?.length === 0 || processedData.displayItems.length === 0)
+    if (metricMode === 'all') {
+      return {
+        type: 'common',
+        data: [{ id: 'flowTrendData', values: processedTrend.values }],
+        series: [
+          {
+            type: 'line',
+            id: 'tokensTrendLine',
+            name: tokensLabel,
+            dataId: 'flowTrendData',
+            xField: 'time',
+            yField: 'tokens',
+            seriesField: 'series',
+            line: { style: { curveType: 'monotone', lineWidth: 2 } },
+            point: { visible: false },
+          },
+          {
+            type: 'line',
+            id: 'requestsTrendLine',
+            name: requestsLabel,
+            dataId: 'flowTrendData',
+            xField: 'time',
+            yField: 'requests',
+            seriesField: 'series',
+            line: {
+              style: { curveType: 'monotone', lineWidth: 2, lineDash: [5, 4] },
+            },
+            point: { visible: false },
+          },
+        ],
+        color,
+        axes: [
+          timeAxis,
+          linearAxisAlignment('left', tokensLabel, true, 'tokensTrendLine'),
+          linearAxisAlignment(
+            'right',
+            requestsLabel,
+            false,
+            'requestsTrendLine'
+          ),
+        ],
+        legends: { visible: false },
+        tooltip: {
+          visible: true,
+          dimension: {
+            title: {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              value: (datum: any) => datum?.time,
+            },
+            content: [
+              {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                key: (datum: any) => `${datum?.series} · ${tokensLabel}`,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value: (datum: any) =>
+                  formatFlowMetricNumber(Number(datum?.tokens) || 0),
+              },
+              {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                key: (datum: any) => `${datum?.series} · ${requestsLabel}`,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value: (datum: any) =>
+                  formatFlowMetricNumber(Number(datum?.requests) || 0),
+              },
+            ],
+          },
+        },
+        background: 'transparent',
+        animation: true,
+      }
+    }
+
+    const valueField = metricMode === 'requests' ? 'requests' : 'tokens'
+    const metricLabel = metricMode === 'requests' ? requestsLabel : tokensLabel
+    return {
+      type: 'line',
+      data: [{ id: 'flowTrendData', values: processedTrend.values }],
+      xField: 'time',
+      yField: valueField,
+      seriesField: 'series',
+      color,
+      line: { style: { curveType: 'monotone', lineWidth: 2 } },
+      point: { visible: false },
+      axes: [timeAxis, linearAxisAlignment('left', metricLabel, true)],
+      legends: {
+        visible: true,
+        selectMode: 'single',
+        position: 'top',
+        orient: 'top',
+        padding: { bottom: 8 },
+      },
+      tooltip: {
+        visible: true,
+        dimension: {
+          title: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            value: (datum: any) => datum?.time,
+          },
+          content: [
+            {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              key: (datum: any) => datum?.series,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              value: (datum: any) =>
+                formatFlowMetricNumber(Number(datum?.[valueField]) || 0),
+            },
+          ],
+        },
+      },
+      background: 'transparent',
+      animation: true,
+    }
+  }, [metricMode, processedTrend, resolvedTheme, t])
+
+  const isTrend = chartType === 'trend'
+  const activeError = isTrend ? trendError : flowError
+  const activeErrorMessage =
+    activeError instanceof Error
+      ? activeError.message
+      : t('Failed to load flow data')
+  const isActiveLoading = isTrend ? isTrendLoading : isLoading
+  const isActiveError = isTrend ? isTrendError : isError
+  const isDataEmpty = isTrend
+    ? !isTrendLoading && (trendRows?.length === 0 || !processedTrend.hasData)
+    : !isLoading &&
+      (flowRows?.length === 0 || processedData.displayItems.length === 0)
 
   let chartContent = null
-  if (isLoading) {
+  if (isActiveLoading) {
     chartContent = <Skeleton className='h-full w-full' />
-  } else if (isError) {
+  } else if (isActiveError) {
     chartContent = (
       <div className='flex h-full items-center justify-center p-4'>
         <Alert variant='destructive' className='max-w-md'>
           <CircleAlert />
           <AlertTitle>{t('Failed to load')}</AlertTitle>
-          <AlertDescription>{flowErrorMessage}</AlertDescription>
+          <AlertDescription>{activeErrorMessage}</AlertDescription>
         </Alert>
       </div>
     )
@@ -656,12 +1015,16 @@ export function CallAnalyticsCharts(props: CallAnalyticsChartsProps) {
       </Empty>
     )
   } else {
-    const chartKey = `${dimension}-${metricMode}-${topLimit}-${overflowMode}-${selectedUsers.join(',')}-${props.sensitiveVisible ? 'vis' : 'hid'}-${resolvedTheme}-${props.filters?.start_timestamp}-${props.filters?.end_timestamp}-${processedData.displayItems.length}`
+    const activeSpec = isTrend ? trendChartSpec : barChartSpec
+    const pointCount = isTrend
+      ? processedTrend.values.length
+      : processedData.displayItems.length
+    const chartKey = `${chartType}-${dimension}-${metricMode}-${topLimit}-${overflowMode}-${selectedUsers.join(',')}-${props.sensitiveVisible ? 'vis' : 'hid'}-${resolvedTheme}-${props.filters?.start_timestamp}-${props.filters?.end_timestamp}-${pointCount}`
     chartContent = (
       <VChart
         key={chartKey}
         spec={{
-          ...barChartSpec,
+          ...activeSpec,
           theme: resolvedTheme === 'dark' ? 'dark' : 'light',
           background: 'transparent',
         }}
@@ -827,7 +1190,7 @@ export function CallAnalyticsCharts(props: CallAnalyticsChartsProps) {
               />
             </div>
           )}
-          {isLoading && (
+          {isActiveLoading && (
             <Loader2 className='text-muted-foreground size-4 animate-spin' />
           )}
         </div>
@@ -836,17 +1199,29 @@ export function CallAnalyticsCharts(props: CallAnalyticsChartsProps) {
       {/* Main Bar Chart Card */}
       <div className='overflow-hidden rounded-lg border'>
         <div className='flex w-full flex-col gap-2 border-b px-3 py-2 sm:px-5 sm:py-3 lg:flex-row lg:items-center lg:justify-between'>
-          <div className='flex min-w-0 items-center gap-2'>
+          <div className='flex min-w-0 flex-wrap items-center gap-2'>
             <IconBadge tone='info' size='sm'>
               <DimensionIcon />
             </IconBadge>
             <div className='text-sm font-semibold'>
-              {dimension === 'token'
-                ? t('Token Analytics')
-                : dimension === 'channel'
-                  ? t('Channel Analytics')
-                  : t('Model Analytics')}
+              {t(DIMENSION_TITLE_KEYS[dimension])}
             </div>
+            <Tabs
+              value={chartType}
+              onValueChange={(value) => setChartType(value as ChartType)}
+              className='shrink-0'
+            >
+              <TabsList aria-label={t('Chart Type')}>
+                <TabsTrigger value='bar' className='gap-1 px-2.5 text-xs'>
+                  <BarChart3 data-icon='inline-start' aria-hidden='true' />
+                  {t('Bar Chart')}
+                </TabsTrigger>
+                <TabsTrigger value='trend' className='gap-1 px-2.5 text-xs'>
+                  <ChartSpline data-icon='inline-start' aria-hidden='true' />
+                  {t('Trend Chart')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           {/* Summary stats */}
@@ -889,11 +1264,7 @@ export function CallAnalyticsCharts(props: CallAnalyticsChartsProps) {
                   <tr className='text-muted-foreground border-b'>
                     <th className='py-1.5 pr-2 font-medium'>#</th>
                     <th className='py-1.5 px-2 font-medium'>
-                      {dimension === 'token'
-                        ? t('Token')
-                        : dimension === 'channel'
-                          ? t('Channel')
-                          : t('Model')}
+                      {t(DIMENSION_LABEL_KEYS[dimension])}
                     </th>
                     <th className='py-1.5 px-2 text-right font-medium'>{t('Tokens')}</th>
                     <th className='py-1.5 px-2 text-right font-medium'>{t('Share')}</th>

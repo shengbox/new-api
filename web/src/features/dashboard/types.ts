@@ -48,6 +48,23 @@ export interface FlowQuotaDataItem {
   quota?: number
 }
 
+// Time-bucketed flow row used by the Call Analytics trend chart. `created_at`
+// is the hour bucket start in Unix seconds; the rest of the dimension fields
+// match FlowQuotaDataItem.
+export interface FlowQuotaTrendDataItem {
+  created_at: number
+  user_id?: number
+  username?: string
+  token_id?: number
+  token_name?: string
+  channel_id?: number
+  channel_name?: string
+  model_name?: string
+  token_used?: number
+  count?: number
+  quota?: number
+}
+
 export type FlowMetric = 'quota' | 'tokens' | 'requests'
 
 export type FlowOverflowMode = 'aggregate' | 'hide'

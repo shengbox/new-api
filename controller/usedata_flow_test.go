@@ -133,3 +133,73 @@ func TestGetUserFlowQuotaDatesRejectsInvalidTimeRange(t *testing.T) {
 	require.False(t, payload.Success)
 	require.Equal(t, "invalid start_timestamp", payload.Message)
 }
+
+func TestGetUserFlowQuotaTrendDatesKeepsTimeBucketsPerDimension(t *testing.T) {
+	setupFlowControllerTestDB(t)
+	// Same token/model/channel but a later hour must stay a separate bucket.
+	require.NoError(t, model.DB.Create(&model.QuotaData{
+		UserID:    1,
+		Username:  "alice",
+		NodeName:  "node-a",
+		TokenID:   11,
+		UseGroup:  "default",
+		ChannelID: 1,
+		ModelName: "gpt-a",
+		CreatedAt: 1300,
+		Count:     3,
+		Quota:     50,
+		TokenUsed: 10,
+	}).Error)
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Set("id", 1)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/api/data/flow/trend/self?start_timestamp=1000&end_timestamp=2000", nil)
+
+	GetUserFlowQuotaTrendDates(ctx)
+
+	payload := decodeFlowQuotaResponse(t, recorder)
+	require.Len(t, payload.Data, 2)
+	require.Equal(t, int64(1100), payload.Data[0].CreatedAt)
+	require.Equal(t, 2, payload.Data[0].Count)
+	require.Equal(t, "primary", payload.Data[0].TokenName)
+	require.Empty(t, payload.Data[0].ChannelName)
+	require.Equal(t, int64(1300), payload.Data[1].CreatedAt)
+	require.Equal(t, 3, payload.Data[1].Count)
+}
+
+func TestGetAllFlowQuotaTrendDatesResolvesChannelNames(t *testing.T) {
+	setupFlowControllerTestDB(t)
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Set("role", common.RoleAdminUser)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/api/data/flow/trend?start_timestamp=1000&end_timestamp=2000", nil)
+
+	GetAllFlowQuotaTrendDates(ctx)
+
+	payload := decodeFlowQuotaResponse(t, recorder)
+	require.Len(t, payload.Data, 2)
+	require.Equal(t, int64(1100), payload.Data[0].CreatedAt)
+	require.Equal(t, "primary", payload.Data[0].TokenName)
+	require.Equal(t, "east", payload.Data[0].ChannelName)
+	require.Equal(t, int64(1200), payload.Data[1].CreatedAt)
+	require.Equal(t, "backup", payload.Data[1].TokenName)
+	require.Equal(t, "east", payload.Data[1].ChannelName)
+}
+
+func TestGetUserFlowQuotaTrendDatesRejectsLongRange(t *testing.T) {
+	setupFlowControllerTestDB(t)
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Set("id", 1)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/api/data/flow/trend/self?start_timestamp=1000&end_timestamp=2600000", nil)
+
+	GetUserFlowQuotaTrendDates(ctx)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	var payload flowQuotaResponse
+	require.NoError(t, common.Unmarshal(recorder.Body.Bytes(), &payload))
+	require.False(t, payload.Success)
+}

@@ -20,6 +20,7 @@ import { api } from '@/lib/api'
 
 import type {
   FlowQuotaDataItem,
+  FlowQuotaTrendDataItem,
   QuotaDataItem,
   UptimeGroupResult,
 } from './types'
@@ -79,6 +80,27 @@ export async function getFlowQuotaDates(
   const res = await api.get<{
     success: boolean
     data?: FlowQuotaDataItem[]
+    message?: string
+  }>(endpoint, { params })
+  return res.data
+}
+
+// Get time-bucketed flow usage for the Call Analytics trend chart.
+export async function getFlowQuotaTrendDates(
+  params: {
+    start_timestamp: number
+    end_timestamp: number
+    default_time?: string
+    username?: string
+  },
+  isAdmin = false
+) {
+  const endpoint = isAdmin
+    ? '/api/data/flow/trend'
+    : '/api/data/flow/trend/self'
+  const res = await api.get<{
+    success: boolean
+    data?: FlowQuotaTrendDataItem[]
     message?: string
   }>(endpoint, { params })
   return res.data

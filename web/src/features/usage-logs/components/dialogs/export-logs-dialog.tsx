@@ -49,17 +49,17 @@ import { useLogsViewScope, useUsageLogsContext } from '../usage-logs-provider'
 
 const route = getRouteApi('/_authenticated/usage-logs/$section')
 
-interface ExportLogsDialogProps {
+interface ExportLogsDialogProps<TData> {
   open: boolean
   onOpenChange: (open: boolean) => void
-  table: Table<Record<string, unknown>>
+  table: Table<TData>
 }
 
-export function ExportLogsDialog({
+export function ExportLogsDialog<TData>({
   open,
   onOpenChange,
   table,
-}: ExportLogsDialogProps) {
+}: ExportLogsDialogProps<TData>) {
   const { t } = useTranslation()
   const { isAdminView: isAdmin } = useLogsViewScope()
   const { sensitiveVisible } = useUsageLogsContext()
@@ -82,7 +82,9 @@ export function ExportLogsDialog({
       let exportItems: UsageLog[] = []
 
       if (exportScope === 'current') {
-        exportItems = currentPageRows.map((r) => r.original as UsageLog)
+        exportItems = currentPageRows.map(
+          (r) => r.original as unknown as UsageLog
+        )
         if (exportItems.length === 0) {
           toast.warning(t('No logs available to export'))
           setIsExporting(false)
@@ -111,7 +113,7 @@ export function ExportLogsDialog({
           const items = (res.data?.items || []) as UsageLog[]
           if (items.length === 0) break
 
-          exportItems = exportItems.concat(items)
+          exportItems = [...exportItems, ...items]
           total = res.data?.total ?? total
           setProgress({ current: exportItems.length, total })
 

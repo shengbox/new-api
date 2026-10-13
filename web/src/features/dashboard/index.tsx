@@ -201,6 +201,14 @@ const SECTION_META: Record<DashboardSectionId, { titleKey: string }> = {
   },
 }
 
+// Flow and users stay in the section registry so the routes keep working, but
+// they are hidden from the dashboard tab bar.
+const HIDDEN_DASHBOARD_SECTIONS = new Set<DashboardSectionId>([
+  'overview',
+  'flow',
+  'users',
+])
+
 export function Dashboard() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -255,12 +263,10 @@ export function Dashboard() {
 
   const meta = SECTION_META[activeSection] ?? SECTION_META.overview
   const isAdmin = Boolean(userRole && userRole >= ROLE.ADMIN)
-  // Keep original flow and users intact in the registry, but hide them from the page tab bar.
-  const HIDDEN_SECTIONS = new Set(['overview', 'flow', 'users'])
   const visibleSections = useMemo(
     () =>
       DASHBOARD_SECTION_IDS.filter(
-        (section) => !HIDDEN_SECTIONS.has(section)
+        (section) => !HIDDEN_DASHBOARD_SECTIONS.has(section)
       ),
     []
   )

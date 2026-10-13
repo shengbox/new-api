@@ -48,7 +48,7 @@ interface ZipFileEntry {
   data: Uint8Array | string
 }
 
-function createZipBuffer(files: ZipFileEntry[]): Uint8Array {
+function createZipBuffer(files: ZipFileEntry[]): Uint8Array<ArrayBuffer> {
   const encoder = new TextEncoder()
   const entries = files.map((f) => {
     const nameBytes = encoder.encode(f.name)
@@ -145,11 +145,11 @@ function createZipBuffer(files: ZipFileEntry[]): Uint8Array {
 
 function xmlEscape(str: unknown): string {
   return String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;')
 }
 
 function getColumnLetter(colIdx: number): string {
@@ -283,7 +283,7 @@ export function generateCsvBlob(
   const escapeCell = (val: string | number): string => {
     const s = String(val ?? '')
     if (s.includes('"') || s.includes(',') || s.includes('\n') || s.includes('\r')) {
-      return `"${s.replace(/"/g, '""')}"`
+      return `"${s.replaceAll('"', '""')}"`
     }
     return s
   }
@@ -379,11 +379,12 @@ export function buildCommonLogsExportData(
     const tokenName = !sensitiveVisible ? '••••' : log.token_name || '-'
     const username = !sensitiveVisible ? '••••' : log.username || '-'
     const group = !sensitiveVisible ? '••••' : log.group || '-'
-    const channel = log.channel_name
-      ? `${log.channel_name} (${log.channel})`
-      : log.channel
-        ? String(log.channel)
-        : '-'
+    let channel = '-'
+    if (log.channel_name) {
+      channel = `${log.channel_name} (${log.channel})`
+    } else if (log.channel) {
+      channel = String(log.channel)
+    }
 
     return [
       formatTimestampToDate(log.created_at),

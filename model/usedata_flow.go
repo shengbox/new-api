@@ -20,6 +20,9 @@ type FlowQuotaData struct {
 	TokenUsed   int    `json:"token_used" gorm:"column:token_used"`
 	Count       int    `json:"count" gorm:"column:count"`
 	Quota       int    `json:"quota" gorm:"column:quota"`
+	// CreatedAt is only populated by the trend query. The aggregate flow
+	// queries leave it at zero so the JSON field stays omitted for them.
+	CreatedAt int64 `json:"created_at,omitempty" gorm:"column:created_at"`
 }
 
 func GetFlowQuotaData(startTime int64, endTime int64, username string, userID int, role int) ([]*FlowQuotaData, error) {
@@ -31,6 +34,50 @@ func GetFlowQuotaData(startTime int64, endTime int64, username string, userID in
 	default:
 		return getSelfFlowQuotaData(startTime, endTime, userID)
 	}
+}
+
+// GetFlowQuotaTrendData returns usage rows bucketed by hour and grouped by
+// token, model and (for staff roles) channel, so the dashboard can render a
+// time-series trend line chart for each dimension.
+func GetFlowQuotaTrendData(startTime int64, endTime int64, username string, userID int, role int) ([]*FlowQuotaData, error) {
+	if role >= common.RoleAdminUser {
+		return getStaffFlowQuotaTrendData(startTime, endTime, username)
+	}
+	return getSelfFlowQuotaTrendData(startTime, endTime, userID)
+}
+
+func getSelfFlowQuotaTrendData(startTime int64, endTime int64, userID int) ([]*FlowQuotaData, error) {
+	rows := make([]*FlowQuotaData, 0)
+	err := flowQuotaBaseQuery(startTime, endTime).
+		Select("created_at, user_id, username, token_id, model_name, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used").
+		Where("user_id = ?", userID).
+		Group("created_at, user_id, username, token_id, model_name").
+		Order("created_at ASC").
+		Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	return rows, fillFlowTokenNames(rows)
+}
+
+func getStaffFlowQuotaTrendData(startTime int64, endTime int64, username string) ([]*FlowQuotaData, error) {
+	rows := make([]*FlowQuotaData, 0)
+	query := flowQuotaBaseQuery(startTime, endTime).
+		Select("created_at, user_id, username, token_id, channel_id, model_name, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used")
+	if username != "" {
+		query = query.Where("username = ?", username)
+	}
+	err := query.
+		Group("created_at, user_id, username, token_id, channel_id, model_name").
+		Order("created_at ASC").
+		Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	if err := fillFlowTokenNames(rows); err != nil {
+		return rows, err
+	}
+	return rows, fillFlowChannelNames(rows)
 }
 
 func flowQuotaBaseQuery(startTime int64, endTime int64) *gorm.DB {

@@ -16,24 +16,21 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import type {
-  FlowQuotaDataItem,
-  FlowUserFilterOption,
-} from '@/features/dashboard/types'
+import type { FlowUserFilterOption } from '@/features/dashboard/types'
 import { createServerError } from '@/lib/server-error-message'
 
 export type FlowDisplayState = 'loading' | 'error' | 'empty' | 'chart'
 
-export interface FlowResponse {
+export interface FlowResponse<T> {
   success: boolean
-  data?: FlowQuotaDataItem[]
+  data?: T[]
   message?: string
 }
 
-export function requireSuccessfulFlowRows(
-  response: FlowResponse,
+export function requireSuccessfulFlowRows<T>(
+  response: FlowResponse<T>,
   fallbackMessage: string
-): FlowQuotaDataItem[] {
+): T[] {
   if (!response.success) {
     throw createServerError(response, response.message || fallbackMessage)
   }
